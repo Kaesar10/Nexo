@@ -1,0 +1,8 @@
+# node_modules y el modelo NO se versionan: se regeneran con scripts/instalar-voz.ps1
+node_modules/
+models/
+
+# Logs y restos de pruebas
+*.log
+_test_*.wav
+_test_*.json

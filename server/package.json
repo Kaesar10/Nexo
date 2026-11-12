@@ -1,0 +1,16 @@
+{
+  "name": "nexo-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Puente entre la app móvil Nexo y el agente DeepSeek Harness del PC",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "pin": "node src/index.js pin",
+    "doctor": "node src/index.js doctor",
+    "test": "node --test \"test/*.test.js\""
+  }
+}

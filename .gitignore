@@ -1,0 +1,34 @@
+# Dependencias y artefactos
+node_modules/
+dist/
+server/data/
+server/voice/models/
+server/voice/node_modules/
+*.log
+*.apk
+.DS_Store
+Thumbs.db
+
+# Secretos y credenciales
+app/.env.production
+scripts/provision.json
+*.crt
+*.key
+
+# Empaquetado Android: se versiona el proyecto nativo (Java, manifest, gradle,
+# iconos), pero no lo generado ni la firma.
+apk/node_modules/
+apk/keystore/
+apk/keystore.properties
+apk/android/.gradle/
+apk/android/build/
+apk/android/app/build/
+apk/android/local.properties
+apk/android/.idea/
+apk/android/capacitor-cordova-android-plugins/
+apk/android/app/src/main/assets/public/
+apk/android/app/src/main/assets/capacitor.config.json
+apk/android/app/src/main/assets/capacitor.plugins.json
+
+apk/android/keystore.properties
+apk/android/local.properties
