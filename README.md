@@ -261,6 +261,24 @@ El APK se firma con `apk/keystore/nexo-release.jks` (credenciales en
 [`docs/API.md`](docs/API.md) y las decisiones de arquitectura en
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
+## Sincronización con el escritorio de DSH
+
+Las conversaciones del móvil viven en el mismo almacén que usa DSH
+(`~/.dsh/sessions`), pero el escritorio no descubre sesiones nuevas por sí solo:
+cada proyecto tiene su lista de sesiones en `~/.dsh/storages/workspace.json` y
+solo muestra las que están ahí.
+
+El puente hace dos cosas para que no se pierdan:
+
+1. **Registra cada chat nuevo** en el proyecto correspondiente en cuanto DSH crea
+   la sesión (por el `cwd` de la sesión).
+2. **Recupera** al arrancar las conversaciones que ya existían y no estaban
+   registradas (p. ej. las creadas antes desde el móvil).
+
+El escritorio lee ese registro **al iniciar**, así que para ver las novedades hay
+que **reiniciar la app de DSH** (cerrar y volver a abrir). No es un fallo del
+puente: el escritorio no vigila ni recarga ese fichero en caliente.
+
 ## Limitaciones conocidas
 
 - **Los chats creados en el escritorio no se pueden adoptar tal cual.** DSH marca

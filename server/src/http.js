@@ -102,6 +102,7 @@ export function createHttp({
   uploads,
   push,
   activity,
+  desktopSync,
   version = '1.0.0',
   log = console.log,
 }) {
@@ -502,6 +503,11 @@ export function createHttp({
           onSession: (sessionId) => {
             createdChatId = sessionId;
             chatMeta.set(sessionId, { model, workspacePath: workspace.path });
+            desktopSync?.registerSession({
+              sessionId,
+              workspacePath: workspace.path,
+              title: workspace.name,
+            });
           },
         });
         if (result.chatId) {
@@ -583,6 +589,11 @@ export function createHttp({
               model,
               workspacePath: source.workspacePath,
               forkedFrom: sourceId,
+            });
+            desktopSync?.registerSession({
+              sessionId,
+              workspacePath: source.workspacePath,
+              title: source.workspaceName ?? undefined,
             });
           },
         });

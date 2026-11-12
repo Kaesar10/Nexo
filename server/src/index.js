@@ -14,6 +14,7 @@ import { createChatMeta } from './chats.js';
 import { createUploads } from './uploads.js';
 import { createPushHub } from './push.js';
 import { createActivity } from './activity.js';
+import { createDesktopSync } from './desktop-sync.js';
 import { createHttp } from './http.js';
 
 const VERSION = '1.0.0';
@@ -210,6 +211,7 @@ async function main() {
   const uploads = createUploads({ dataDir });
   const push = createPushHub({ log: console.log });
   const activity = createActivity({ file: join(dataDir, 'activity.json') });
+  const desktopSync = createDesktopSync({ log: console.log });
 
   // Aviso cuando termina una tarea larga. Lo consume el servicio en primer
   // plano del móvil vía /api/push (push propio, sin FCM).
@@ -260,6 +262,19 @@ async function main() {
   const imported = await workspaces.seedFromDsh();
   if (imported > 0) console.log(`[workspaces] importados ${imported} proyectos de DSH`);
 
+  // Recupera en el registro del escritorio las conversaciones que ya existían
+  // y se crearon fuera de él (p. ej. desde el móvil). El escritorio las mostrará
+  // la próxima vez que arranque.
+  try {
+    const store = await import('./dsh-sessions.js');
+    const recovered = desktopSync.backfill(config.workspaces, (path) =>
+      store.listSessions(path, { fast: true }),
+    );
+    if (recovered > 0) console.log(`[escritorio] ${recovered} conversaciones registradas para el GUI`);
+  } catch (error) {
+    console.log(`[escritorio] no se pudo sincronizar el registro: ${error.message}`);
+  }
+
   const handler = createHttp({
     config,
     auth,
@@ -271,6 +286,7 @@ async function main() {
     uploads,
     push,
     activity,
+    desktopSync,
     version: VERSION,
   });
   const server = createServer((req, res) => {
