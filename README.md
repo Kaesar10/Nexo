@@ -76,6 +76,36 @@ cd ..\apk; npm run apk
 > la app (Ajustes → dispositivos) y vuelve a aprovisionar. La pantalla de PIN
 > sigue existiendo como respaldo para un móvil sin aprovisionar.
 
+## Compilar desde el repositorio (clon limpio)
+
+Este repositorio **no contiene secretos**: ni el keystore de firma, ni tokens de
+dispositivo, ni la URL pública de nadie, ni el APK compilado (lleva el token).
+Todo eso se genera en tu máquina:
+
+```powershell
+# 1. Dependencias de la interfaz
+cd app; npm install
+
+# 2. Puente en marcha con tu propio Tailscale/Funnel
+cd ..; scripts\iniciar.cmd        # en otra consola, deja el puente corriendo
+
+# 3. Aprovisionar (genera app/.env.production con token + URL, y un dispositivo)
+node scripts/provisionar.mjs "Mi móvil"
+
+# 4. Compilar interfaz y APK con TU keystore
+cd app; npm run build
+cd ..\apk; npm install
+keytool -genkeypair -v -keystore keystore\nexo-release.jks -alias nexo `
+  -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Nexo"
+# crea apk\keystore.properties con storeFile/storePassword/keyAlias/keyPassword
+npx cap sync android
+npm run apk
+```
+
+Sin `keystore.properties` la APK sale sin firmar; con él, lista para instalar.
+El repo no incluye el modelo de voz (76 MB): `scripts\instalar-voz.ps1` lo
+descarga. Tampoco incluye `node_modules`, `app/dist` ni datos de sesiones.
+
 ## Instalar en iPhone (o Android sin APK)
 
 La PWA se instala desde el navegador sobre HTTPS. Abre la URL pública que imprime
