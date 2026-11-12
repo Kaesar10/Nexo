@@ -1,4 +1,4 @@
-import { existsSync, watch } from 'node:fs';
+import { appendFileSync, existsSync, watch } from 'node:fs';
 import { basename, join } from 'node:path';
 import { homedir } from 'node:os';
 import { realpath } from 'node:fs/promises';
@@ -28,8 +28,11 @@ import { realpath } from 'node:fs/promises';
 
 export const name = 'nexo-live-sync';
 
+/** Versión del plugin (aparece en el registro de depuración). */
+export const VERSION = '1.1.0';
+
 /** Servicios de DSH que necesita el plugin. */
-export const inject = ['workspaceRegistry', 'sessionPersistence'];
+export const inject = ['workspaceRegistry', 'sessionPersistence', 'sessionController'];
 
 /** Repaso de seguridad cuando el vigilante de ficheros no dispara. */
 const SWEEP_MS = 30_000;
@@ -78,11 +81,13 @@ export function apply(ctx) {
   const home = process.env.DSH_HOME ?? join(homedir(), '.dsh');
   const sessionsRoot = join(home, 'sessions');
 
+  const logFile = join(home, 'nexo-live-sync.log');
   const log = (message) => {
+    const line = `${new Date().toISOString()} v${VERSION} ${message}\n`;
     try {
-      ctx.logger?.info?.(message);
+      appendFileSync(logFile, line, 'utf8');
     } catch {
-      /* el logger es opcional */
+      /* sin registro si el fichero no se puede escribir */
     }
     console.log(`[nexo-live-sync] ${message}`);
   };
@@ -94,6 +99,25 @@ export function apply(ctx) {
   let sweepTimer;
   let watcher;
   let disposed = false;
+
+  /**
+   * Avisa al GUI de la sesión nueva. La pertenencia al proyecto llega sola por
+   * el evento de dominio; el resumen de la sesión tiene que anunciarlo una vez
+   * para que la fila aparezca en la barra lateral sin recargar.
+   */
+  async function announce(sessionId) {
+    try {
+      const result = await ctx.sessionController.list({});
+      const summary = (result?.items ?? []).find((item) => item.sessionId === sessionId);
+      if (summary !== undefined) {
+        ctx.emit('api-session/added', summary);
+        return true;
+      }
+    } catch (error) {
+      log(`no se pudo anunciar ${sessionId}: ${error.message}`);
+    }
+    return false;
+  }
 
   function refreshKnown() {
     for (const workspace of registry.list()) {
@@ -127,6 +151,7 @@ export function apply(ctx) {
       await registry.get(workspace.id)?.attachSession(header.id);
       known.add(header.id);
       log(`sesión ${header.id} adjuntada a «${workspace.title ?? workspace.path}»`);
+      await announce(header.id);
       return true;
     } catch (error) {
       log(`no se pudo adjuntar ${header.id}: ${error.message}`);
@@ -190,6 +215,7 @@ export function apply(ctx) {
     if (attached > 0) log(`${attached} conversaciones recuperadas`);
   }
 
+  log('plugin cargado');
   // 1. Barrido inicial: lo creado con el escritorio cerrado.
   void sweep();
 
