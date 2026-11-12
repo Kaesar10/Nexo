@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync } from 'node:fs';
-import { networkInterfaces } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir, networkInterfaces } from 'node:os';
 import { join } from 'node:path';
 import { loadConfig, resolveDshCli, rotatePin, saveConfig, SERVER_ROOT, PROJECT_ROOT, configFile } from './config.js';
 import { createAuth } from './auth.js';
@@ -211,7 +211,18 @@ async function main() {
   const uploads = createUploads({ dataDir });
   const push = createPushHub({ log: console.log });
   const activity = createActivity({ file: join(dataDir, 'activity.json') });
-  const desktopSync = createDesktopSync({ log: console.log });
+  // Con el plugin `nexo-live-sync` instalado en el escritorio es él quien
+  // registra las sesiones en vivo; escribir el mismo fichero desde los dos
+  // procesos podría pisarse. Si el plugin está, el puente delega.
+  const desktopPatchFile = join(homedir(), '.dsh', 'profiles', 'desktop', 'cordis.patch.yml');
+  let desktopLiveSync = false;
+  try {
+    desktopLiveSync = readFileSync(desktopPatchFile, 'utf8').includes('nexo-live-sync');
+  } catch {
+    desktopLiveSync = false;
+  }
+  if (desktopLiveSync) console.log('[escritorio] plugin de sincronización en vivo activo; registro delegado');
+  const desktopSync = desktopLiveSync ? null : createDesktopSync({ log: console.log });
 
   // Aviso cuando termina una tarea larga. Lo consume el servicio en primer
   // plano del móvil vía /api/push (push propio, sin FCM).
@@ -265,14 +276,16 @@ async function main() {
   // Recupera en el registro del escritorio las conversaciones que ya existían
   // y se crearon fuera de él (p. ej. desde el móvil). El escritorio las mostrará
   // la próxima vez que arranque.
-  try {
-    const store = await import('./dsh-sessions.js');
-    const recovered = desktopSync.backfill(config.workspaces, (path) =>
-      store.listSessions(path, { fast: true }),
-    );
-    if (recovered > 0) console.log(`[escritorio] ${recovered} conversaciones registradas para el GUI`);
-  } catch (error) {
-    console.log(`[escritorio] no se pudo sincronizar el registro: ${error.message}`);
+  if (desktopSync !== null) {
+    try {
+      const store = await import('./dsh-sessions.js');
+      const recovered = desktopSync.backfill(config.workspaces, (path) =>
+        store.listSessions(path, { fast: true }),
+      );
+      if (recovered > 0) console.log(`[escritorio] ${recovered} conversaciones registradas para el GUI`);
+    } catch (error) {
+      console.log(`[escritorio] no se pudo sincronizar el registro: ${error.message}`);
+    }
   }
 
   const handler = createHttp({

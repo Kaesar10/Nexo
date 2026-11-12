@@ -275,9 +275,27 @@ El puente hace dos cosas para que no se pierdan:
 2. **Recupera** al arrancar las conversaciones que ya existían y no estaban
    registradas (p. ej. las creadas antes desde el móvil).
 
-El escritorio lee ese registro **al iniciar**, así que para ver las novedades hay
-que **reiniciar la app de DSH** (cerrar y volver a abrir). No es un fallo del
-puente: el escritorio no vigila ni recarga ese fichero en caliente.
+Con el plugin **nexo-live-sync** instalado en el perfil del escritorio, todo esto
+pasa **en vivo**: el plugin vigila `~/.dsh/sessions`, adjunta cada sesión nueva al
+proyecto correcto y el controlador de proyectos del escritorio empuja el cambio
+al GUI sin reiniciar. Además hace un barrido al arrancar para recuperar lo
+creado con DSH cerrado.
+
+Instalación del plugin (una vez):
+
+```powershell
+# junction para que el código del repo sea el que carga DSH
+cmd /c mklink /J "$env:USERPROFILE\.dsh\plugins\dsh-plugin-nexo-sync" .\dsh-plugin-nexo-sync
+# y en ~/.dsh/profiles/desktop/cordis.patch.yml:
+#   - insert:
+#       - id: nexo-live-sync
+#         name: file:///C:/Users/<usuario>/.dsh/plugins/dsh-plugin-nexo-sync/lib/index.js
+# reiniciar DSH para que cargue el plugin
+```
+
+El puente detecta el plugin y le delega el registro (así no escriben los dos el
+mismo fichero). Sin plugin, el puente sigue registrando y recuperando, con el
+reinicio de DSH como único paso manual.
 
 ## Limitaciones conocidas
 
